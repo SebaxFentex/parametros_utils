@@ -4,14 +4,14 @@ Librería interna para declarar y resolver parámetros de ejecución de tareas.
 
 ## Instalación y requisitos
 
-Versión local `0.1.0`, **sin repositorio remoto ni tag publicado**. Todavía no hay una URL de instalación verificada. Después de publicar y comprobar el tag, el consumidor usará esta plantilla sustituyendo ambos marcadores por valores reales:
+Versión `0.1.0` publicada en `https://github.com/SebaxFentex/parametros_utils` con tag `v0.1.0`, sin release de GitHub. El consumidor usará esta plantilla con valores reales:
 
 ```toml
 [project]
 dependencies = ["parametros_utils"]
 
 [tool.uv.sources]
-parametros_utils = { git = "<URL_DEL_REPOSITORIO>", tag = "<TAG_PUBLICADO>" }
+parametros_utils = { git = "https://github.com/SebaxFentex/parametros_utils", tag = "v0.1.0" }
 ```
 
 - Ejecutar `uv lock` y `uv sync` después de declarar la dependencia.
