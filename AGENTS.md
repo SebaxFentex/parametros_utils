@@ -22,7 +22,9 @@
 - La librería no lee `.env` ni variables de entorno, no configura logging, no crea archivos y no calcula predeterminados. NullHandler en __init__.
 - No añadir __main__.py: no se solicitó un comando independiente de la librería.
 - Tests ejecutables en tests/test_*.py con main(), usando unittest de stdlib, sin .env. Un .bat por test en Ejecutables/tests.
-- Verificación: uv sync --locked; uv run python -m unittest discover -s tests -v; tests por archivo; compileall; uv build; import desde wheel aislado.
+- Verificación: `uv sync --locked`; `uv run python -m unittest discover -s tests -v`; tests por archivo; `uv run ruff check src tests`; `uv run ruff format --check src tests`; `uv run ty check`; compileall; `uv build`; import desde wheel aislado.
+- Ruff 0.17.4 y ty 0.0.99 son dependencias de desarrollo fijadas, no de ejecución. Cada supresión de tipos en un test corresponde a datos inválidos intencionales.
+- Módulos internos: `_parametro.py` declara y valida configuración; `_validacion.py` interpreta valores puros; `_preguntas.py` solicita y reintenta; `_resolucion.py` administra argparse y resuelve los modos. Mantener `__init__.py` limitado a API y NullHandler.
 - Usar ciclos de prueba fallida → implementación mínima → prueba correcta antes de ampliar comportamiento.
 - Desechables solo en el scratch autorizado del perfil, nunca en rutas de sistema ni carpetas de negocio.
 - Git local y commits en español autorizados. No crear remoto, hacer push, tag ni release en este encargo.
