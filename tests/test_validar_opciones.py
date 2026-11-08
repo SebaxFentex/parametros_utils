@@ -13,7 +13,10 @@ class PruebasOpciones(unittest.TestCase):
             hasattr(parametros_utils, "validar_opciones"), "Falta validar_opciones"
         )
         self.assertEqual(
-            parametros_utils.validar_opciones(" 3,2,,3, ", MENU), {"3", "2"}
+            parametros_utils.validar_opciones(
+                texto_seleccion=" 3,2,,3, ", menu_opciones=MENU
+            ),
+            {"3", "2"},
         )
 
     def test_expande_codigo_todos_del_consumidor(self):

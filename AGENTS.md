@@ -3,9 +3,13 @@
 ## Alcance y contrato
 
 - Paquete interno Python >=3.14, layout `src/`, backend `uv_build`, sin dependencias de ejecución.
-- API aprobada: `Parametro`, `obtener_parametros`, `validar_periodo`, `validar_si_no`, `validar_opciones`, `solicitar_periodo`, `solicitar_si_no`, `solicitar_opciones`.
-- Declaraciones: nombre, tipo (`periodo`, `si_no`, `opciones`), pregunta, ayuda, predeterminado textual opcional, menú y código de todos opcionales según el tipo.
-- Retorno final: diccionario nombre → date/bool/set[str]. No devolver origen, modo ni otros metadatos.
+- API aprobada: `Parametro`, `ParametroPeriodo`, `ParametroSiNo`, `ParametroOpciones`, `ParametrosResueltos`, `obtener_parametros`, `validar_periodo`, `validar_si_no`, `validar_opciones`, `solicitar_periodo`, `solicitar_si_no`, `solicitar_opciones`.
+- `Parametro[T]` es base abstracta (`frozen`, `slots`, `kw_only`, `eq=False`) con `nombre`, `pregunta`, `ayuda = ""` y `predeterminado: str | None = None`. No se instancia ni se amplía con tipos extra o plugin.
+- Variantes cerradas: `ParametroPeriodo(Parametro[date])`, `ParametroSiNo(Parametro[bool])` y `ParametroOpciones(Parametro[set[str]])`; solo la última lleva `menu_opciones: dict[str, str]` obligatorio y `codigo_todos: str | None = None`. Sin campo `tipo` ni opciones heredadas.
+- `obtener_parametros(definiciones_parametros: Sequence[ParametroPeriodo | ParametroSiNo | ParametroOpciones], *, descripcion: str, argumentos: Sequence[str] | None = None) -> ParametrosResueltos`. Sin resultados parciales ante cancelación.
+- Acceso solo con `parametros.obtener_valor_parametro(definicion_parametro)`: misma instancia por identidad; instancia ajena `ValueError`; no definición `TypeError`. Sin acceso por cadenas ni `assert`/`cast`/`Any`.
+- Las definiciones nunca guardan estado de ejecución.
+- Los predeterminados son texto que se interpreta solo al usarse; el automático nunca pregunta.
 - El periodo se interpreta como YYYYMM, recorta espacios exteriores y retorna date(año, mes, 1); los límites de año son los de date.
 - Si/no acepta si/sí/no sin distinguir mayúsculas, recortando espacios exteriores.
 - Opciones separadas por coma: recortar cada código, eliminar vacíos y duplicados, sin garantía de orden; selección vacía, desconocidos o todos mezclado con otro código son errores.
@@ -14,21 +18,30 @@
 - Interactivo: pedir todos los parámetros, sin predeterminados ni mezcla con argumentos explícitos. Reintentar únicamente contenido inválido.
 - EOFError y KeyboardInterrupt se propagan incluso desde obtener_parametros.
 - TypeError por tipo incorrecto y ValueError por contenido inválido; errores CLI se traducen con analizador.error. Ayuda antes de validar predeterminados o preguntar.
+- Glosario de dominio en el README: definicion, entrada textual, valor resuelto, menu, codigo_opcion, etiqueta_opcion, codigos_seleccionados, codigos_desconocidos.
 
 ## Desarrollo
 
 - Leer README y normativa Tigo vigente antes de modificar. No migrar consumidores ni operar producción.
-- Los menús, las preguntas y los errores interactivos son la salida solicitada por el consumidor; no convertirlos en logging. La aclaración de las secciones 4 y 6 de la norma queda pendiente al final, por decisión del usuario.
+- Los menús, las preguntas y los errores interactivos son la salida solicitada por el consumidor; no convertirlos en logging.
 - La librería no lee `.env` ni variables de entorno, no configura logging, no crea archivos y no calcula predeterminados. NullHandler en __init__.
+- Incluir el marcador vacío `src/parametros_utils/py.typed` en wheel y sdist. Comprobar la inferencia de tipos desde el paquete instalado en un entorno aislado, sin resolver imports desde el código fuente del repositorio.
 - No añadir __main__.py: no se solicitó un comando independiente de la librería.
 - Tests ejecutables en tests/test_*.py con main(), usando unittest de stdlib, sin .env. Un .bat por test en Ejecutables/tests.
 - Verificación: `uv sync --locked`; `uv run python -m unittest discover -s tests -v`; tests por archivo; `uv run ruff check src tests`; `uv run ruff format --check src tests`; `uv run ty check`; compileall; `uv build`; import desde wheel aislado.
 - Ruff 0.17.4 y ty 0.0.99 son dependencias de desarrollo fijadas, no de ejecución. Cada supresión de tipos en un test corresponde a datos inválidos intencionales.
-- Módulos internos: `_parametro.py` declara y valida configuración; `_validacion.py` interpreta valores puros; `_preguntas.py` solicita y reintenta; `_resolucion.py` administra argparse y resuelve los modos. Mantener `__init__.py` limitado a API y NullHandler.
+- Módulos internos: `_parametro.py` configuración y polimorfismo de variantes; `_resultados.py` almacenamiento tipado por definición; `_resolucion.py` argparse y modos; `_validacion.py` funciones puras; `_preguntas.py` reintentos. Mantener `__init__.py` limitado a API y NullHandler.
 - Usar ciclos de prueba fallida → implementación mínima → prueba correcta antes de ampliar comportamiento.
 - Desechables solo en el scratch autorizado del perfil, nunca en rutas de sistema ni carpetas de negocio.
 - Git: repositorio público `https://github.com/SebaxFentex/parametros_utils`, con la rama `main` y el tag anotado `v0.1.0` publicados por autorización del usuario. Registrar los cambios verificados con commits en español y subirlos a `main` dentro del encargo autorizado. No modificar tags publicados ni crear nuevos tags o releases sin autorización expresa.
 
 ## Historial de rupturas
 
-Sin rupturas: implementación inicial, sin consumidores migrados.
+- `0.1.0`: implementación inicial, sin consumidores migrados.
+- Sin publicar, sobre `0.1.0` — 2026-11-08: rediseño sin compatibilidad, aún sin tag; `v0.1.0` publicado mantiene la API vieja.
+  - `Parametro` único con campo `tipo` y retorno en diccionario por nombre → base abstracta `Parametro[T]` con `ParametroPeriodo`, `ParametroSiNo` y `ParametroOpciones`; `obtener_parametros` devuelve `ParametrosResueltos` y cada valor se lee con `obtener_valor_parametro` por identidad de instancia.
+  - `opciones` y `codigo_todos` opcionales según el tipo → `menu_opciones` obligatorio solo en `ParametroOpciones` y `codigo_todos` solo allí; el consumidor elige su código.
+  - Acceso por cadenas con comprobaciones en el consumidor → acceso por definición, sin `assert`/`cast`/`Any`.
+  - Argumento `parametros` de `obtener_parametros` → `definiciones_parametros`; constructores de variantes solo por palabra clave, sin conservar el constructor anterior.
+  - Keywords `texto` de `validar_periodo` y `validar_si_no` → `texto_periodo` y `respuesta_si_no`; en `validar_opciones`, `texto`/`opciones` → `texto_seleccion`/`menu_opciones`; en `solicitar_opciones`, `opciones` → `menu_opciones`.
+  - Sin aliases ni aceptación del contrato viejo; sin migraciones incluidas.

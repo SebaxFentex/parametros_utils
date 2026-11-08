@@ -11,7 +11,9 @@ class PruebasPeriodo(unittest.TestCase):
         self.assertTrue(
             hasattr(parametros_utils, "validar_periodo"), "Falta validar_periodo"
         )
-        self.assertEqual(parametros_utils.validar_periodo("202503"), date(2025, 3, 1))
+        self.assertEqual(
+            parametros_utils.validar_periodo(texto_periodo="202503"), date(2025, 3, 1)
+        )
 
     def test_recorta_solo_espacios_exteriores(self):
         self.assertEqual(

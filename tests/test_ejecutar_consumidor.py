@@ -4,35 +4,40 @@ import json
 import subprocess
 import sys
 import unittest
+from importlib.resources import files
 from pathlib import Path
 
 CODIGO_CONSUMIDOR = """
 import json
 import sys
-from parametros_utils import Parametro, obtener_parametros
+from parametros_utils import (
+    ParametroPeriodo, ParametroSiNo, ParametroOpciones, obtener_parametros,
+)
 
-parametros = [
-    Parametro("periodo", "periodo", "Periodo: ", ayuda="Mes YYYYMM", predeterminado="202503"),
-    Parametro("confirmar", "si_no", "Continuar: ", predeterminado="si"),
-    Parametro("opciones", "opciones", "Archivos: ", predeterminado="0", opciones={"2": "Clientes", "3": "Facturacion"}, codigo_todos="0"),
-]
+definicion_periodo = ParametroPeriodo(nombre="periodo", pregunta="Periodo: ", ayuda="Mes YYYYMM", predeterminado="202503")
+definicion_confirmacion = ParametroSiNo(nombre="confirmar", pregunta="Continuar: ", predeterminado="si")
+definicion_opciones = ParametroOpciones(nombre="opciones", pregunta="Archivos: ", predeterminado="0", menu_opciones={"2": "Clientes", "3": "Facturacion"}, codigo_todos="0")
+definiciones_parametros = [definicion_periodo, definicion_confirmacion, definicion_opciones]
 try:
-    valores = obtener_parametros(parametros, descripcion="Consumidor de prueba")
+    parametros = obtener_parametros(definiciones_parametros, descripcion="Consumidor de prueba")
 except (EOFError, KeyboardInterrupt):
     print("Cancelado por el consumidor.", file=sys.stderr)
     raise SystemExit(1)
 print("RESULTADO=" + json.dumps({
-    "periodo": valores["periodo"].isoformat(),
-    "confirmar": valores["confirmar"],
-    "opciones": sorted(valores["opciones"]),
+    "periodo": parametros.obtener_valor_parametro(definicion_periodo).isoformat(),
+    "confirmar": parametros.obtener_valor_parametro(definicion_confirmacion),
+    "opciones": sorted(parametros.obtener_valor_parametro(definicion_opciones)),
 }))
 """
 
 
 class PruebasProcesos(unittest.TestCase):
-    def ejecutar(self, argumentos, entrada="", codigo=CODIGO_CONSUMIDOR):
+    def ejecutar_consumidor(
+        self, argumentos, entrada="", codigo_consumidor=CODIGO_CONSUMIDOR
+    ):
+        """Ejecuta el código consumidor con otra carpeta y entrada controlada."""
         return subprocess.run(
-            [sys.executable, "-X", "utf8", "-c", codigo, *argumentos],
+            [sys.executable, "-X", "utf8", "-c", codigo_consumidor, *argumentos],
             input=entrada,
             capture_output=True,
             encoding="utf-8",
@@ -41,14 +46,15 @@ class PruebasProcesos(unittest.TestCase):
             check=False,
         )
 
-    def resultado(self, proceso):
+    def leer_resultado_consumidor(self, proceso):
+        """Comprueba la salida del proceso y extrae su resultado serializado."""
         self.assertEqual(proceso.returncode, 0, proceso.stderr)
         return json.loads(proceso.stdout.rsplit("RESULTADO=", 1)[1])
 
     def test_automatico_funciona_con_entrada_cerrada_y_desde_otra_carpeta(self):
-        proceso = self.ejecutar([])
+        proceso = self.ejecutar_consumidor([])
         self.assertEqual(
-            self.resultado(proceso),
+            self.leer_resultado_consumidor(proceso),
             {"periodo": "2025-03-01", "confirmar": True, "opciones": ["2", "3"]},
         )
         self.assertNotIn("Periodo: ", proceso.stdout)
@@ -66,13 +72,20 @@ class PruebasProcesos(unittest.TestCase):
             ),
         ]:
             with self.subTest(argumentos=argumentos):
-                self.assertEqual(self.resultado(self.ejecutar(argumentos)), esperado)
+                self.assertEqual(
+                    self.leer_resultado_consumidor(
+                        self.ejecutar_consumidor(argumentos)
+                    ),
+                    esperado,
+                )
 
     def test_ayuda_termina_sin_preguntar_ni_resolver_default_invalido(self):
-        codigo = CODIGO_CONSUMIDOR.replace(
+        codigo_consumidor = CODIGO_CONSUMIDOR.replace(
             'predeterminado="202503"', 'predeterminado="incorrecto"'
         )
-        proceso = self.ejecutar(["--help"], codigo=codigo)
+        proceso = self.ejecutar_consumidor(
+            ["--help"], codigo_consumidor=codigo_consumidor
+        )
         self.assertEqual(proceso.returncode, 0)
         self.assertIn("--interactivo", proceso.stdout)
         self.assertIn("Mes YYYYMM", proceso.stdout)
@@ -92,45 +105,48 @@ class PruebasProcesos(unittest.TestCase):
             ["--interactivo", "--confirmar", "si"],
         ]:
             with self.subTest(argumentos=argumentos):
-                proceso = self.ejecutar(argumentos)
+                proceso = self.ejecutar_consumidor(argumentos)
                 self.assertEqual(proceso.returncode, 2, proceso.stderr)
                 self.assertNotIn("RESULTADO=", proceso.stdout)
                 self.assertNotIn("Periodo: ", proceso.stdout)
                 self.assertNotIn("Traceback", proceso.stderr)
 
     def test_interactivo_reintenta_y_entrega_valores_equivalentes(self):
-        proceso = self.ejecutar(
+        proceso = self.ejecutar_consumidor(
             ["--interactivo"], "\n202513\n202401\nquizas\n NO \n0,2\n3,2,3\n"
         )
-        esperado = self.resultado(
-            self.ejecutar(
+        esperado = self.leer_resultado_consumidor(
+            self.ejecutar_consumidor(
                 ["--periodo", "202401", "--confirmar", "no", "--opciones", "3,2"]
             )
         )
-        self.assertEqual(self.resultado(proceso), esperado)
+        self.assertEqual(self.leer_resultado_consumidor(proceso), esperado)
         self.assertEqual(proceso.stdout.count("Error:"), 4)
 
     def test_cancelacion_la_traduce_el_consumidor(self):
-        proceso = self.ejecutar(["--interactivo"], "202401\n")
+        proceso = self.ejecutar_consumidor(["--interactivo"], "202401\n")
         self.assertEqual(proceso.returncode, 1)
         self.assertIn("Cancelado por el consumidor", proceso.stderr)
         self.assertNotIn("RESULTADO=", proceso.stdout)
         self.assertNotIn("Traceback", proceso.stderr)
 
     def test_importar_no_configura_logging_ni_escribe_en_consola(self):
-        codigo = """
+        codigo_consumidor = """
 import logging
 raiz = logging.getLogger()
 antes = list(raiz.handlers)
 import parametros_utils
 assert raiz.handlers == antes
-assert len(parametros_utils.__all__) == 8
+assert len(parametros_utils.__all__) == 12
 assert any(isinstance(h, logging.NullHandler) for h in logging.getLogger("parametros_utils").handlers)
 """
-        proceso = self.ejecutar([], codigo=codigo)
+        proceso = self.ejecutar_consumidor([], codigo_consumidor=codigo_consumidor)
         self.assertEqual(proceso.returncode, 0, proceso.stderr)
         self.assertEqual(proceso.stdout, "")
         self.assertEqual(proceso.stderr, "")
+
+    def test_distribuye_marcador_de_tipado(self):
+        self.assertTrue(files("parametros_utils").joinpath("py.typed").is_file())
 
 
 def main() -> int:

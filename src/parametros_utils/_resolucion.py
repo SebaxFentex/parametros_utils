@@ -2,123 +2,151 @@
 
 import argparse
 from collections.abc import Sequence
-from datetime import date
 
-from ._parametro import Parametro, _comprobar_texto
-from ._preguntas import solicitar_opciones, solicitar_periodo, solicitar_si_no
-from ._validacion import _validar_menu, validar_opciones, validar_periodo, validar_si_no
+from ._parametro import (
+    ParametroOpciones,
+    ParametroPeriodo,
+    ParametroSiNo,
+    _comprobar_tipo_textual,
+)
+from ._resultados import ParametrosResueltos
+from ._validacion import _validar_menu_opciones
 
 
 def obtener_parametros(
-    parametros: Sequence[Parametro],
+    definiciones_parametros: Sequence[
+        ParametroPeriodo | ParametroSiNo | ParametroOpciones
+    ],
     *,
     descripcion: str,
     argumentos: Sequence[str] | None = None,
-) -> dict[str, date | bool | set[str]]:
-    """Resuelve todas las entradas declaradas y devuelve sus valores validados.
+) -> ParametrosResueltos:
+    """Resuelve las definiciones y devuelve sus resultados con acceso tipado.
 
-    En automático usa el argumento explícito o el predeterminado textual.
-    Con --interactivo solicita todas las entradas sin usar predeterminados.
+    Args:
+        definiciones_parametros: Definiciones con nombres únicos, en el orden
+            en que se solicitarán si se habilita --interactivo.
+        descripcion: Descripción de la tarea mostrada en la ayuda.
+        argumentos: Argumentos explícitos; None lee sys.argv y [] indica que
+            no se proporcionó ningún argumento.
+
+    Returns:
+        Resultados completos de esta ejecución. El acceso mediante cada
+        definición conserva su tipo date, bool o set[str], sin metadatos de origen.
 
     Raises:
-        TypeError: Si las declaraciones o argumentos tienen tipos incorrectos.
-        ValueError: Si hay declaraciones duplicadas o configuración inválida.
+        TypeError: Si las definiciones o los argumentos tienen tipos incorrectos.
+        ValueError: Si hay nombres duplicados o configuración inválida.
         SystemExit: Con 0 por ayuda o con 2 por errores de argumentos.
         EOFError: Si se cierra la entrada interactiva.
         KeyboardInterrupt: Si el operador cancela la entrada interactiva.
     """
-    declaraciones = _comprobar_declaraciones(parametros)
-    _comprobar_texto(descripcion, "descripción")
-    _comprobar_argumentos(argumentos)
+    definiciones_parametros = _comprobar_definiciones_parametros(
+        definiciones_parametros
+    )
+    _comprobar_tipo_textual(descripcion, "descripción")
+    _comprobar_argumentos_ejecucion(argumentos)
     analizador = argparse.ArgumentParser(description=descripcion, allow_abbrev=False)
     analizador.add_argument(
         "--interactivo",
         action="store_true",
         help="Solicita todos los parámetros por pantalla; incompatible con valores explícitos.",
     )
-    for parametro in declaraciones:
+    for definicion_parametro in definiciones_parametros:
         analizador.add_argument(
-            f"--{parametro.nombre}",
-            dest=parametro.nombre,
-            help=parametro.ayuda or parametro.pregunta,
+            f"--{definicion_parametro.nombre}",
+            dest=f"parametro_{definicion_parametro.nombre}",
+            metavar=definicion_parametro.nombre.upper(),
+            help=definicion_parametro.ayuda or definicion_parametro.pregunta,
         )
-    entradas = analizador.parse_args(argumentos)
-    if entradas.interactivo:
-        explicitos = [
-            f"--{p.nombre}"
-            for p in declaraciones
-            if getattr(entradas, p.nombre) is not None
-        ]
-        if explicitos:
-            analizador.error(
-                f"--interactivo no admite valores explícitos: {', '.join(explicitos)}."
+    argumentos_analizados = analizador.parse_args(argumentos)
+    parametros = ParametrosResueltos()
+    if argumentos_analizados.interactivo:
+        argumentos_explicitos = [
+            f"--{definicion_parametro.nombre}"
+            for definicion_parametro in definiciones_parametros
+            if _leer_argumento_parametro(
+                argumentos_analizados, definicion_parametro.nombre
             )
-        return {parametro.nombre: _solicitar(parametro) for parametro in declaraciones}
-
-    resultado: dict[str, date | bool | set[str]] = {}
-    for parametro in declaraciones:
-        texto = getattr(entradas, parametro.nombre)
-        if texto is None:
-            texto = parametro.predeterminado
-        if texto is None:
+            is not None
+        ]
+        if argumentos_explicitos:
             analizador.error(
-                f"Falta --{parametro.nombre}: no se definió un valor predeterminado."
+                "--interactivo no admite valores explícitos: "
+                f"{', '.join(argumentos_explicitos)}."
+            )
+        for definicion_parametro in definiciones_parametros:
+            definicion_parametro._resolver_valor_interactivo(parametros)
+        return parametros
+
+    for definicion_parametro in definiciones_parametros:
+        entrada_textual = _leer_argumento_parametro(
+            argumentos_analizados, definicion_parametro.nombre
+        )
+        if entrada_textual is None:
+            entrada_textual = definicion_parametro.predeterminado
+        if entrada_textual is None:
+            analizador.error(
+                f"Falta --{definicion_parametro.nombre}: "
+                "no se definió un valor predeterminado."
             )
         try:
-            resultado[parametro.nombre] = _interpretar(parametro, texto)
+            definicion_parametro._resolver_valor_automatico(parametros, entrada_textual)
         except ValueError as exc:
-            analizador.error(f"--{parametro.nombre}: {exc}")
-    return resultado
+            analizador.error(f"--{definicion_parametro.nombre}: {exc}")
+    return parametros
 
 
-def _interpretar(parametro: Parametro, texto: str) -> date | bool | set[str]:
-    """Interpreta una entrada con el validador de su tipo declarado."""
-    if parametro.tipo == "periodo":
-        return validar_periodo(texto)
-    if parametro.tipo == "si_no":
-        return validar_si_no(texto)
-    assert parametro.opciones is not None
-    return validar_opciones(
-        texto, parametro.opciones, codigo_todos=parametro.codigo_todos
+def _leer_argumento_parametro(
+    argumentos_analizados: argparse.Namespace, nombre_parametro: str
+) -> str | None:
+    """Recupera la entrada textual de una definición sin interpretar su contenido."""
+    entrada_textual: object = getattr(
+        argumentos_analizados, f"parametro_{nombre_parametro}"
     )
+    if entrada_textual is None or isinstance(entrada_textual, str):
+        return entrada_textual
+    raise TypeError("El argumento del parámetro debe ser texto o estar omitido.")
 
 
-def _solicitar(parametro: Parametro) -> date | bool | set[str]:
-    """Solicita una entrada usando la pregunta y el menú del consumidor."""
-    if parametro.tipo == "periodo":
-        return solicitar_periodo(parametro.pregunta)
-    if parametro.tipo == "si_no":
-        return solicitar_si_no(parametro.pregunta)
-    assert parametro.opciones is not None
-    return solicitar_opciones(
-        parametro.pregunta, parametro.opciones, codigo_todos=parametro.codigo_todos
-    )
+def _comprobar_definiciones_parametros(
+    definiciones_parametros: object,
+) -> tuple[ParametroPeriodo | ParametroSiNo | ParametroOpciones, ...]:
+    """Comprueba una secuencia de las tres variantes admitidas con nombres únicos."""
+    if not isinstance(definiciones_parametros, Sequence) or isinstance(
+        definiciones_parametros, (str, bytes)
+    ):
+        raise TypeError("Las definiciones de parámetros deben ser una secuencia.")
+    definiciones_comprobadas: list[
+        ParametroPeriodo | ParametroSiNo | ParametroOpciones
+    ] = []
+    nombres_parametros: set[str] = set()
+    for definicion_parametro in definiciones_parametros:
+        if not isinstance(
+            definicion_parametro, (ParametroPeriodo, ParametroSiNo, ParametroOpciones)
+        ):
+            raise TypeError(
+                "Cada definición debe ser una de las tres variantes admitidas."
+            )
+        if definicion_parametro.nombre in nombres_parametros:
+            raise ValueError(f"Parámetro repetido: {definicion_parametro.nombre!r}.")
+        nombres_parametros.add(definicion_parametro.nombre)
+        if isinstance(definicion_parametro, ParametroOpciones):
+            _validar_menu_opciones(
+                definicion_parametro.menu_opciones, definicion_parametro.codigo_todos
+            )
+        definiciones_comprobadas.append(definicion_parametro)
+    return tuple(definiciones_comprobadas)
 
 
-def _comprobar_declaraciones(parametros: object) -> tuple[Parametro, ...]:
-    """Comprueba una secuencia de declaraciones con nombres únicos."""
-    if not isinstance(parametros, Sequence) or isinstance(parametros, (str, bytes)):
-        raise TypeError("Los parámetros deben ser una secuencia de objetos Parametro.")
-    declaraciones: list[Parametro] = []
-    nombres: set[str] = set()
-    for parametro in parametros:
-        if not isinstance(parametro, Parametro):
-            raise TypeError("Cada declaración debe ser un objeto Parametro.")
-        if parametro.nombre in nombres:
-            raise ValueError(f"Parámetro repetido: {parametro.nombre!r}.")
-        nombres.add(parametro.nombre)
-        if parametro.tipo == "opciones":
-            _validar_menu(parametro.opciones, parametro.codigo_todos)
-        declaraciones.append(parametro)
-    return tuple(declaraciones)
-
-
-def _comprobar_argumentos(argumentos: object) -> None:
+def _comprobar_argumentos_ejecucion(argumentos_ejecucion: object) -> None:
     """Comprueba argumentos explícitos sin leer sys.argv ni interpretar valores."""
-    if argumentos is None:
+    if argumentos_ejecucion is None:
         return
-    if not isinstance(argumentos, Sequence) or isinstance(argumentos, (str, bytes)):
+    if not isinstance(argumentos_ejecucion, Sequence) or isinstance(
+        argumentos_ejecucion, (str, bytes)
+    ):
         raise TypeError("Los argumentos deben ser una secuencia de textos o None.")
-    for argumento in argumentos:
+    for argumento in argumentos_ejecucion:
         if not isinstance(argumento, str):
             raise TypeError("Cada argumento debe ser texto.")

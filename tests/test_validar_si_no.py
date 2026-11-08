@@ -19,7 +19,9 @@ class PruebasSiNo(unittest.TestCase):
             ("Si", True),
         ]:
             with self.subTest(texto=texto):
-                self.assertIs(parametros_utils.validar_si_no(texto), esperado)
+                self.assertIs(
+                    parametros_utils.validar_si_no(respuesta_si_no=texto), esperado
+                )
 
     def test_rechaza_variantes_no_acordadas(self):
         for texto in [
