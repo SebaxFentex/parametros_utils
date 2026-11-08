@@ -27,7 +27,7 @@
 - Módulos internos: `_parametro.py` declara y valida configuración; `_validacion.py` interpreta valores puros; `_preguntas.py` solicita y reintenta; `_resolucion.py` administra argparse y resuelve los modos. Mantener `__init__.py` limitado a API y NullHandler.
 - Usar ciclos de prueba fallida → implementación mínima → prueba correcta antes de ampliar comportamiento.
 - Desechables solo en el scratch autorizado del perfil, nunca en rutas de sistema ni carpetas de negocio.
-- Git local y commits en español autorizados. No crear remoto, hacer push, tag ni release en este encargo.
+- Git: repositorio público `https://github.com/SebaxFentex/parametros_utils`, con la rama `main` y el tag anotado `v0.1.0` publicados por autorización del usuario. Registrar los cambios verificados con commits en español y subirlos a `main` dentro del encargo autorizado. No modificar tags publicados ni crear nuevos tags o releases sin autorización expresa.
 
 ## Historial de rupturas
 
