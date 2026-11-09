@@ -39,12 +39,12 @@
 - `tests/test_organizar_modulos.py` protege la estructura plana y las fronteras de importación aprobadas; conservar también las pruebas de comportamiento e inferencia desde el wheel instalado.
 - Usar ciclos de prueba fallida → implementación mínima → prueba correcta antes de ampliar comportamiento.
 - Desechables solo en el scratch autorizado del perfil, nunca en rutas de sistema ni carpetas de negocio.
-- Git: repositorio público `https://github.com/SebaxFentex/parametros_utils`, con la rama `main` y el tag anotado `v0.1.0` publicados por autorización del usuario. Registrar los cambios verificados con commits en español y subirlos a `main` dentro del encargo autorizado. No modificar tags publicados ni crear nuevos tags o releases sin autorización expresa.
+- Git: repositorio público `https://github.com/SebaxFentex/parametros_utils`, con la rama `main` y los tags anotados `v0.1.0` y `v1.0.0` publicados por autorización del usuario. Registrar los cambios verificados con commits en español y subirlos a `main` dentro del encargo autorizado. No modificar tags publicados ni crear nuevos tags o releases sin autorización expresa.
 
 ## Historial de rupturas
 
 - `0.1.0`: implementación inicial, sin consumidores migrados.
-- Sin publicar, sobre `0.1.0` — 2026-11-08: rediseño sin compatibilidad, aún sin tag; `v0.1.0` publicado mantiene la API vieja.
+- `1.0.0` — 2026-11-09: rediseño sin compatibilidad; `v0.1.0` publicado mantiene la API vieja.
   - `Parametro` único con campo `tipo` y retorno en diccionario por nombre → base abstracta `Parametro[T]` con `ParametroPeriodo`, `ParametroSiNo` y `ParametroOpciones`; `obtener_parametros` devuelve `ParametrosResueltos` y cada valor se lee con `obtener_valor_parametro` por identidad de instancia.
   - `opciones` y `codigo_todos` opcionales según el tipo → `menu_opciones` obligatorio solo en `ParametroOpciones` y `codigo_todos` solo allí; el consumidor elige su código.
   - Acceso por cadenas con comprobaciones en el consumidor → acceso por definición, sin `assert`/`cast`/`Any`.

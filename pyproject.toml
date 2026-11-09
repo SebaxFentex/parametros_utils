@@ -1,6 +1,6 @@
 [project]
 name = "parametros_utils"
-version = "0.1.0"
+version = "1.0.0"
 description = "Parámetros de ejecución de tareas: periodo, si/no y opciones"
 readme = "README.md"
 requires-python = ">=3.14"

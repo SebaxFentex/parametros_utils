@@ -10,16 +10,16 @@ No lee `.env`, calcula predeterminados, configura logs, crea archivos ni sustitu
 
 ## Estado de versión y cómo declararla
 
-La última versión etiquetada es `v0.1.0`, con la API anterior: un solo `Parametro` con campo `tipo` y retorno en diccionario. `pyproject.toml` se mantiene en `0.1.0` hasta que se autorice una nueva versión.
+La última versión etiquetada es `v1.0.0`, con el rediseño: subclases por variante y `ParametrosResueltos` con acceso por identidad. `pyproject.toml` está en `1.0.0`.
 
-El rediseño que describe este archivo (subclases por variante y `ParametrosResueltos`) vive en `main` y aún no tiene tag. Instalar `v0.1.0` no te da la API nueva. Cuando el rediseño se publique, usa el tag real donde abajo lees `vX.Y.Z`. No consumas por rama.
+La versión `v0.1.0` mantiene la API anterior: un solo `Parametro` con campo `tipo` y retorno en diccionario. No consumas por rama.
 
 ```toml
 [project]
 dependencies = ["parametros_utils"]
 
 [tool.uv.sources]
-parametros_utils = { git = "https://github.com/SebaxFentex/parametros_utils", tag = "vX.Y.Z" }
+parametros_utils = { git = "https://github.com/SebaxFentex/parametros_utils", tag = "v1.0.0" }
 ```
 
 Tras declarar la dependencia corre `uv lock` y `uv sync`. La librería pide Python 3.14 o superior y no trae dependencias de ejecución. No la uses con `path` ni `editable`, no copies el paquete y no toques `sys.path`.
