@@ -59,10 +59,10 @@ def solicitar_opciones(
     *,
     codigo_todos: str | None = None,
 ) -> set[str]:
-    """Muestra el menú y solicita un conjunto válido de códigos seleccionados.
+    """Muestra la pregunta y el menú, y solicita un conjunto válido de códigos.
 
     Args:
-        pregunta: Texto del consumidor; conserva sus espacios finales.
+        pregunta: Texto del consumidor; se imprime como encabezado antes del menú.
         menu_opciones: Diccionario de códigos admitidos a etiquetas visibles.
         codigo_todos: Código opcional para seleccionar todo el menú.
 
@@ -78,13 +78,16 @@ def solicitar_opciones(
     _recortar_texto_obligatorio(pregunta, "pregunta")
     _validar_menu_opciones(menu_opciones, codigo_todos)
 
+    # La pregunta encabeza y el menú se muestra una sola vez: los reintentos
+    # repiten solo el prompt corto dentro del ayudante.
+    print(pregunta)
     if codigo_todos is not None:
         print(f"  {codigo_todos} = Todos")
     for codigo_opcion, etiqueta_opcion in menu_opciones.items():
         print(f"  {codigo_opcion} = {etiqueta_opcion}")
 
     return _solicitar_valor_parametro(
-        pregunta,
+        "Selección: ",
         lambda texto_seleccion: validar_opciones(
             texto_seleccion, menu_opciones, codigo_todos=codigo_todos
         ),

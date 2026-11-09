@@ -29,7 +29,9 @@ class Parametro[T](ABC):
 
     Args:
         nombre: Identificador utilizado como opción de consola, sin guiones.
-        pregunta: Pregunta del consumidor, incluidos sus espacios finales.
+        pregunta: Texto mostrado al operador, incluidos sus espacios
+            finales; en opciones encabeza el menú y en las demás
+            variantes es el prompt de captura.
         ayuda: Descripción para la ayuda; si está vacía se usa la pregunta.
         predeterminado: Texto que se interpreta solo si falta el argumento
             automático. None exige un argumento explícito en ese modo.

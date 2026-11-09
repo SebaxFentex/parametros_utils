@@ -43,6 +43,13 @@ class PruebasPreguntas(unittest.TestCase):
         self.assertIn("3 = Facturación", salida.getvalue())
         self.assertIn("0 = Todos", salida.getvalue())
         self.assertEqual(salida.getvalue().count("Error:"), 2)
+        self.assertEqual(salida.getvalue().count("Archivos del cierre: "), 1)
+        self.assertLess(
+            salida.getvalue().index("Archivos del cierre: "),
+            salida.getvalue().index("2 = Clientes"),
+        )
+        self.assertEqual(salida.getvalue().count("Selección: "), 3)
+        self.assertEqual(salida.getvalue().count("  0 = Todos\n"), 1)
 
     def test_menu_sin_todos_no_muestra_codigo_inventado(self):
         salida = StringIO()

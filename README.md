@@ -10,16 +10,16 @@ No lee `.env`, calcula predeterminados, configura logs, crea archivos ni sustitu
 
 ## Estado de versión y cómo declararla
 
-La última versión etiquetada es `v1.0.0`, con el rediseño: subclases por variante y `ParametrosResueltos` con acceso por identidad. `pyproject.toml` está en `1.0.0`.
+La última versión etiquetada es `v1.1.0`: en opciones interactivas la pregunta encabeza, el menú se muestra una sola vez y la captura usa `Selección: `. `pyproject.toml` está en `1.1.0`.
 
-La versión `v0.1.0` mantiene la API anterior: un solo `Parametro` con campo `tipo` y retorno en diccionario. No consumas por rama.
+La versión `v1.0.0` trae el rediseño: subclases por variante y `ParametrosResueltos` con acceso por identidad. La versión `v0.1.0` mantiene la API anterior: un solo `Parametro` con campo `tipo` y retorno en diccionario. No consumas por rama.
 
 ```toml
 [project]
 dependencies = ["parametros_utils"]
 
 [tool.uv.sources]
-parametros_utils = { git = "https://github.com/SebaxFentex/parametros_utils", tag = "v1.0.0" }
+parametros_utils = { git = "https://github.com/SebaxFentex/parametros_utils", tag = "v1.1.0" }
 ```
 
 Tras declarar la dependencia corre `uv lock` y `uv sync`. La librería pide Python 3.14 o superior y no trae dependencias de ejecución. No la uses con `path` ni `editable`, no copies el paquete y no toques `sys.path`.
@@ -140,7 +140,7 @@ ParametroOpciones(*, nombre: str, pregunta: str, ayuda: str = "", predeterminado
 `Parametro` es la base abstracta y no se instancia. Las tres variantes son `frozen`, con `slots`, solo palabra clave e `eq=False`: dos definiciones con los mismos campos no son iguales, cada una se distingue por identidad. Ninguna guarda el valor de una ejecución.
 
 - `nombre` es un identificador Python y se vuelve `--nombre`. Vale `año_cierre`. No valen guiones ni espacios en los bordes. Los nombres `interactivo`, `help` y `h` están reservados.
-- `pregunta` pide texto y guarda sus espacios finales. Si `ayuda` queda vacía, la ayuda muestra la pregunta.
+- `pregunta` se muestra al operador y guarda sus espacios finales; en opciones encabeza el menú y la captura usa `Selección: `. Si `ayuda` queda vacía, la ayuda muestra la pregunta.
 - `predeterminado=None` exige el argumento explícito en automático. Una cadena vacía cuenta como presente pero inválida. El texto se interpreta solo cuando se usa: ni al declarar, ni al pedir ayuda, ni cuando un argumento explícito lo reemplaza.
 - `menu_opciones` es obligatorio en opciones y no existe en las otras variantes. Exige códigos y etiquetas textuales no vacíos. Solo los códigos prohíben comas y espacios exteriores; las etiquetas conservan el texto recibido. `codigo_todos` no puede repetirse como clave del menú y su valor lo elige el consumidor: no se impone el `0`.
 - Los campos no se reasignan. No toques el menú mientras la librería pregunta.
@@ -192,7 +192,7 @@ solicitar_si_no(pregunta: str) -> bool
 solicitar_opciones(pregunta: str, menu_opciones: dict[str, str], *, codigo_todos: str | None = None) -> set[str]
 ```
 
-Usan los mismos validadores, te dicen por qué falló tu respuesta y repiten la pregunta. Las opciones muestran el menú y la fila de todos si lo configuraste. Una respuesta vacía nunca dispara un predeterminado.
+Usan los mismos validadores, te dicen por qué falló tu respuesta y repiten la pregunta. Las opciones imprimen primero la pregunta, luego el menú y la fila de todos una sola vez; los reintentos repiten solo `Selección: `. Una respuesta vacía nunca dispara un predeterminado.
 
 La configuración se revisa antes de leer: si está mal, fallan sin entrar en bucle. `EOFError` y `KeyboardInterrupt` pasan a tu tarea.
 

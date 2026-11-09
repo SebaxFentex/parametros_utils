@@ -39,7 +39,7 @@
 - `tests/test_organizar_modulos.py` protege la estructura plana y las fronteras de importación aprobadas; conservar también las pruebas de comportamiento e inferencia desde el wheel instalado.
 - Usar ciclos de prueba fallida → implementación mínima → prueba correcta antes de ampliar comportamiento.
 - Desechables solo en el scratch autorizado del perfil, nunca en rutas de sistema ni carpetas de negocio.
-- Git: repositorio público `https://github.com/SebaxFentex/parametros_utils`, con la rama `main` y los tags anotados `v0.1.0` y `v1.0.0` publicados por autorización del usuario. Registrar los cambios verificados con commits en español y subirlos a `main` dentro del encargo autorizado. No modificar tags publicados ni crear nuevos tags o releases sin autorización expresa.
+- Git: repositorio público `https://github.com/SebaxFentex/parametros_utils`, con la rama `main` y los tags anotados `v0.1.0`, `v1.0.0` y `v1.1.0` publicados por autorización del usuario. Registrar los cambios verificados con commits en español y subirlos a `main` dentro del encargo autorizado. No modificar tags publicados ni crear nuevos tags o releases sin autorización expresa.
 
 ## Historial de rupturas
 
