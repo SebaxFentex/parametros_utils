@@ -1,4 +1,9 @@
-"""Interpretación y validación de valores textuales de parámetros."""
+"""Comprueba configuración e interpreta entradas textuales sin interacción.
+
+Las funciones públicas convierten texto en fechas, booleanos o códigos. Las
+comprobaciones internas validan campos y menús compartidos por las otras capas.
+Este módulo no conoce modelos, modos de ejecución ni detalles de consola.
+"""
 
 from datetime import date
 
@@ -25,6 +30,7 @@ def validar_periodo(texto_periodo: str) -> date:
         raise ValueError(
             "El periodo debe tener formato YYYYMM con seis dígitos de 0 a 9."
         )
+
     try:
         return date(int(periodo_recortado[:4]), int(periodo_recortado[4:]), 1)
     except ValueError as exc:
@@ -47,10 +53,12 @@ def validar_si_no(respuesta_si_no: str) -> bool:
     respuesta_normalizada = _recortar_texto_obligatorio(
         respuesta_si_no, "si/no"
     ).lower()
+
     if respuesta_normalizada in {"si", "sí"}:
         return True
     if respuesta_normalizada == "no":
         return False
+
     raise ValueError("La respuesta debe ser 'si', 'sí' o 'no'.")
 
 
@@ -76,6 +84,7 @@ def validar_opciones(
             queda vacía o se mezcla todos con otro código.
     """
     _validar_menu_opciones(menu_opciones, codigo_todos)
+
     seleccion_recortada = _recortar_texto_obligatorio(texto_seleccion, "opciones")
     codigos_seleccionados = {
         codigo_opcion.strip()
@@ -84,6 +93,7 @@ def validar_opciones(
     }
     if not codigos_seleccionados:
         raise ValueError("Debes seleccionar al menos una opción.")
+
     codigos_desconocidos = codigos_seleccionados - set(menu_opciones)
     if codigo_todos is not None:
         codigos_desconocidos.discard(codigo_todos)
@@ -91,12 +101,15 @@ def validar_opciones(
         raise ValueError(
             f"Códigos de opción desconocidos: {', '.join(sorted(codigos_desconocidos))}."
         )
+
+    # Los duplicados ya se eliminaron: repetir todos no equivale a mezclarlo.
     if codigo_todos in codigos_seleccionados:
         if len(codigos_seleccionados) != 1:
             raise ValueError(
                 "El código de todos no puede mezclarse con otras opciones."
             )
         return set(menu_opciones)
+
     return codigos_seleccionados
 
 
@@ -106,9 +119,11 @@ def _validar_menu_opciones(menu_opciones: object, codigo_todos: object) -> None:
         raise TypeError("Las opciones deben ser un diccionario de código a etiqueta.")
     if not menu_opciones:
         raise ValueError("El menú de opciones no puede estar vacío.")
+
     for codigo_opcion, etiqueta_opcion in menu_opciones.items():
         _validar_codigo_opcion(codigo_opcion)
         _recortar_texto_obligatorio(etiqueta_opcion, "etiqueta de opción")
+
     if codigo_todos is not None:
         _validar_codigo_opcion(codigo_todos)
         if codigo_todos in menu_opciones:
@@ -131,7 +146,17 @@ def _recortar_texto_obligatorio(entrada_textual: object, nombre_campo: str) -> s
             f"El campo {nombre_campo} debe ser texto; "
             f"llegó {type(entrada_textual).__name__}."
         )
+
     texto_recortado = entrada_textual.strip()
     if not texto_recortado:
         raise ValueError(f"El campo {nombre_campo} no puede estar vacío.")
     return texto_recortado
+
+
+def _comprobar_tipo_textual(entrada_textual: object, nombre_campo: str) -> None:
+    """Comprueba el tipo textual sin exigir contenido ni interpretarlo."""
+    if not isinstance(entrada_textual, str):
+        raise TypeError(
+            f"El campo {nombre_campo} debe ser texto; "
+            f"llegó {type(entrada_textual).__name__}."
+        )

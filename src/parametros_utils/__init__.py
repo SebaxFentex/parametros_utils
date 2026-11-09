@@ -1,11 +1,20 @@
-"""Parámetros de ejecución de tareas Python."""
+"""Expone la API pública de parámetros de ejecución de tareas Python.
+
+El consumidor importa desde este paquete. Los módulos con prefijo _ son internos;
+la resolución, los modelos y los adaptadores de consola permanecen separados.
+"""
 
 import logging
 
-from ._parametro import Parametro, ParametroOpciones, ParametroPeriodo, ParametroSiNo
+from ._modelos import (
+    Parametro,
+    ParametroOpciones,
+    ParametroPeriodo,
+    ParametroSiNo,
+    ParametrosResueltos,
+)
 from ._preguntas import solicitar_opciones, solicitar_periodo, solicitar_si_no
 from ._resolucion import obtener_parametros
-from ._resultados import ParametrosResueltos
 from ._validacion import validar_opciones, validar_periodo, validar_si_no
 
 __all__ = [

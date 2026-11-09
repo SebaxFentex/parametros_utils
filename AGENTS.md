@@ -30,7 +30,13 @@
 - Tests ejecutables en tests/test_*.py con main(), usando unittest de stdlib, sin .env. Un .bat por test en Ejecutables/tests.
 - Verificación: `uv sync --locked`; `uv run python -m unittest discover -s tests -v`; tests por archivo; `uv run ruff check src tests`; `uv run ruff format --check src tests`; `uv run ty check`; compileall; `uv build`; import desde wheel aislado.
 - Ruff 0.17.4 y ty 0.0.99 son dependencias de desarrollo fijadas, no de ejecución. Cada supresión de tipos en un test corresponde a datos inválidos intencionales.
-- Módulos internos: `_parametro.py` configuración y polimorfismo de variantes; `_resultados.py` almacenamiento tipado por definición; `_resolucion.py` argparse y modos; `_validacion.py` funciones puras; `_preguntas.py` reintentos. Mantener `__init__.py` limitado a API y NullHandler.
+- Estructura plana dentro de `src/parametros_utils/`: no introducir un subpaquete `_interno` ni otro nivel para esta organización. Mantener el prefijo `_` en los módulos privados y `__init__.py` limitado a API y NullHandler.
+- `_modelos.py` reúne definiciones, variantes y `ParametrosResueltos`. Mantener interpretación pura y enlace tipado por variante; no añadir preguntas, análisis de consola ni selección de modos a los modelos.
+- `_validacion.py` concentra interpretación y comprobaciones puras compartidas, incluida `_comprobar_tipo_textual`. No importa otros módulos del paquete ni produce interacción.
+- `_argumentos.py` concentra argparse, ayuda, Namespace, entradas textuales y traducción de errores CLI. Su representación interna `_ArgumentosEjecucion` conserva el modo, los textos y cómo informar un error; no aplica predeterminados ni interpreta contenido.
+- `_preguntas.py` presenta preguntas y menús y reintenta sobre validadores; no conoce modelos ni resultados. `_resolucion.py` comprueba la colección de definiciones, selecciona el recorrido, aplica la precedencia y coordina el guardado.
+- Separar fases con líneas vacías y comentar decisiones no evidentes: identidad, almacenamiento por variante, prefijo de Namespace, omisión frente a texto vacío y propagación de cancelaciones. Los docstrings explican responsabilidad y alcance sin narrar cada instrucción.
+- `tests/test_organizar_modulos.py` protege la estructura plana y las fronteras de importación aprobadas; conservar también las pruebas de comportamiento e inferencia desde el wheel instalado.
 - Usar ciclos de prueba fallida → implementación mínima → prueba correcta antes de ampliar comportamiento.
 - Desechables solo en el scratch autorizado del perfil, nunca en rutas de sistema ni carpetas de negocio.
 - Git: repositorio público `https://github.com/SebaxFentex/parametros_utils`, con la rama `main` y el tag anotado `v0.1.0` publicados por autorización del usuario. Registrar los cambios verificados con commits en español y subirlos a `main` dentro del encargo autorizado. No modificar tags publicados ni crear nuevos tags o releases sin autorización expresa.

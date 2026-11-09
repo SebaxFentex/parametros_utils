@@ -1,4 +1,9 @@
-"""Preguntas interactivas y reintentos de parámetros de ejecución."""
+"""Solicita respuestas al operador y reintenta las entradas inválidas.
+
+Presenta las preguntas y los menús del consumidor, delegando el contenido a la
+validación pura. No analiza argumentos, aplica predeterminados ni conoce las
+definiciones o el almacenamiento de una ejecución completa.
+"""
 
 from collections.abc import Callable
 from datetime import date
@@ -72,10 +77,12 @@ def solicitar_opciones(
     """
     _recortar_texto_obligatorio(pregunta, "pregunta")
     _validar_menu_opciones(menu_opciones, codigo_todos)
+
     if codigo_todos is not None:
         print(f"  {codigo_todos} = Todos")
     for codigo_opcion, etiqueta_opcion in menu_opciones.items():
         print(f"  {codigo_opcion} = {etiqueta_opcion}")
+
     return _solicitar_valor_parametro(
         pregunta,
         lambda texto_seleccion: validar_opciones(
@@ -89,9 +96,11 @@ def _solicitar_valor_parametro[T](
 ) -> T:
     """Lee y valida una respuesta, reintentando solo errores de contenido."""
     _recortar_texto_obligatorio(pregunta, "pregunta")
+
     while True:
         respuesta_operador = input(pregunta)
         try:
             return validar_respuesta(respuesta_operador)
         except ValueError as exc:
+            # Los errores de tipo y la cancelación deben llegar al consumidor.
             print(f"Error: {exc}")

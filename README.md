@@ -198,13 +198,30 @@ La configuración se revisa antes de leer: si está mal, fallan sin entrar en bu
 
 ### Dónde vive cada cosa
 
-- `_parametro.py`: configuración y polimorfismo de las variantes.
-- `_resultados.py`: guardado tipado por definición.
-- `_resolucion.py`: `argparse` y los dos modos.
-- `_validacion.py`: funciones puras, sin preguntas ni pantalla.
-- `_preguntas.py`: reintentos sobre los validadores.
+El paquete mantiene todos sus módulos en un solo nivel, sin subpaquetes internos.
+El prefijo `_` distingue la implementación de la API que importas desde
+`parametros_utils`.
 
-`__init__.py` solo expone la API y el `NullHandler`.
+- `_modelos.py`: definiciones, variantes y `ParametrosResueltos`. Reúne los dos
+  lados del acceso tipado; no analiza la consola ni solicita respuestas.
+- `_validacion.py`: interpretación del texto y comprobaciones de configuración.
+  Sus funciones son puras y no conocen los modelos ni los modos de ejecución.
+- `_argumentos.py`: opciones de consola, ayuda, lectura textual y errores de
+  `argparse`. No aplica predeterminados ni interpreta valores.
+- `_preguntas.py`: preguntas, menús y reintentos mediante los validadores.
+  No conoce el almacenamiento de una ejecución completa.
+- `_resolucion.py`: coordinación de los recorridos automático e interactivo,
+  precedencia de entradas y guardado de los resultados.
+- `__init__.py`: API pública y `NullHandler`.
+
+Para seguir una ejecución, empieza por `obtener_parametros` en `_resolucion.py`.
+Primero comprueba las definiciones y delega la lectura de consola; después dirige
+uno de los recorridos y devuelve el resultado completo. Los detalles de `dest`,
+`metavar` y `Namespace` están en `_argumentos.py`, no en los modelos.
+
+El enlace entre definición y resultado permanece en `_modelos.py`: cada variante
+interpreta su texto y accede a su almacenamiento concreto. Esa colaboración
+conserva el tipo del retorno sin añadir comprobaciones al consumidor.
 
 ## Códigos de salida
 
@@ -238,6 +255,8 @@ uv build
 - `tests/test_validar_opciones.py`: selección, menús y todos.
 - `tests/test_solicitar_parametros.py`: preguntas, reintentos y cancelación.
 - `tests/test_obtener_parametros.py`: precedencia, ayuda y separación de modos.
+- `tests/test_organizar_modulos.py`: estructura plana y fronteras entre modelos,
+  consola y resolución.
 - `tests/test_ejecutar_consumidor.py`: CLI real en procesos separados, desde otra carpeta y con entrada cerrada.
 
 Cada archivo corre también con `uv run python tests/<test>.py` y tiene un `.bat` del mismo nombre en `Ejecutables/tests/`. `Ejecutables/build.bat` construye y lista artefactos sin publicar en GitHub. `Ejecutables/abrir_vscode.bat` abre la raíz del paquete.
