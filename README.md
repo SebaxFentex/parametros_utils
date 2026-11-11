@@ -26,7 +26,7 @@ Tras declarar la dependencia corre `uv lock` y `uv sync`. La librería pide Pyth
 
 ## Qué necesita tu proyecto
 
-Calcula tus predeterminados y pásalos como texto. La librería no lee `.env` ni calcula periodos de negocio. Llama a `obtener_parametros` antes de cargar configuración obligatoria, configurar logs, crear salidas o abrir recursos de negocio.
+Calcula tus predeterminados y pásalos como texto. La librería no lee `.env` ni calcula periodos de negocio. En tareas Tigo, reúne el cálculo, las definiciones y la llamada directa a `obtener_parametros` en una función local `obtener_parametros_tarea(argumentos) -> dict`, conforme a `TIGO_PYTHON_PROYECTOS.md`, secciones 3 y 9.1. `main` la invoca primero, antes de cargar configuración obligatoria, configurar logs, crear salidas o abrir recursos de negocio; no la compartas entre tareas.
 
 Las automatizaciones llaman a `uv run` directamente, sin `--interactivo`. Para una tarea `src/tarea_<nombre>.py` los comandos se ven así, con tu módulo en lugar de `tarea_<nombre>`:
 
@@ -52,7 +52,7 @@ Si tu proyecto usa su propio `.env`, suma `--env-file .env` al `uv run`.
 
 ## Ejemplo mínimo
 
-La tarea calcula el mes anterior, guarda cada definición y lee cada valor con su definición. Sin claves de texto y sin comprobaciones de tipo en tu código: no usa `assert`, `cast` ni `Any`.
+La función local calcula el mes anterior, guarda cada definición y obtiene su valor por identidad. Devuelve un `dict` propio de la tarea para que `main` lo consuma. Ese diccionario no cambia `ParametrosResueltos`: el resultado de la librería sigue sin acceso por cadenas y no necesita `assert`, `cast` ni `Any` para leer sus valores.
 
 ```python
 from datetime import date, timedelta
@@ -65,7 +65,8 @@ from parametros_utils import (
 )
 
 
-def main(argumentos: list[str] | None = None) -> int:
+def obtener_parametros_tarea(argumentos: list[str] | None = None) -> dict:
+    """Resuelve los parámetros de ejecución de esta tarea."""
     mes_anterior = date.today().replace(day=1) - timedelta(days=1)
     definicion_periodo = ParametroPeriodo(
         nombre="periodo",
@@ -90,19 +91,29 @@ def main(argumentos: list[str] | None = None) -> int:
     definiciones_parametros = [
         definicion_periodo, definicion_confirmacion, definicion_archivos
     ]
+    parametros = obtener_parametros(
+        definiciones_parametros,
+        descripcion="Demostración de parámetros de cierre",
+        argumentos=argumentos,
+    )
+    return {
+        "periodo": parametros.obtener_valor_parametro(definicion_periodo),
+        "confirmar": parametros.obtener_valor_parametro(definicion_confirmacion),
+        "archivos": parametros.obtener_valor_parametro(definicion_archivos),
+    }
+
+
+def main(argumentos: list[str] | None = None) -> int:
+    """Muestra los parámetros resueltos de la tarea de ejemplo."""
     try:
-        parametros = obtener_parametros(
-            definiciones_parametros,
-            descripcion="Demostración de parámetros de cierre",
-            argumentos=argumentos,
-        )
+        parametros = obtener_parametros_tarea(argumentos)
     except (EOFError, KeyboardInterrupt):
         print("\nEntrada interactiva cancelada.")
         return 1
 
-    periodo = parametros.obtener_valor_parametro(definicion_periodo)
-    confirmar = parametros.obtener_valor_parametro(definicion_confirmacion)
-    archivos = parametros.obtener_valor_parametro(definicion_archivos)
+    periodo = parametros["periodo"]
+    confirmar = parametros["confirmar"]
+    archivos = parametros["archivos"]
     print(periodo.strftime("%Y%m"), confirmar, sorted(archivos))
     # Aquí empieza el proceso de la tarea con los valores ya resueltos.
     return 0
